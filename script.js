@@ -46,177 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Start typing loop
-  setTimeout(typeText, 1000);
-
-  // ==========================================
-  // 2. Circuit Canvas Animation
-  // ==========================================
-  const canvas = document.getElementById('circuit-canvas');
-  const ctx = canvas.getContext('2d');
-  let animationFrameId;
-
-  let width = canvas.width = window.innerWidth;
-  let height = canvas.height = window.innerHeight;
-
-  window.addEventListener('resize', () => {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
-    initCircuit();
-  });
-
-  let mouse = { x: null, y: null, radius: 120 };
-  window.addEventListener('mousemove', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-  });
-  window.addEventListener('mouseleave', () => {
-    mouse.x = null;
-    mouse.y = null;
-  });
-
-  // Trace line class
-  class CircuitTrace {
-    constructor(startX, startY, gridSpacing) {
-      this.points = [{ x: startX, y: startY }];
-      this.maxPoints = Math.floor(Math.random() * 3) + 3; // 3 to 5 nodes
-      this.gridSpacing = gridSpacing;
-      
-      let x = startX;
-      let y = startY;
-      
-      // Procedurally generate orthagonal traces (horizontal & vertical PCB style)
-      for (let i = 0; i < this.maxPoints; i++) {
-        const directions = [
-          { dx: 1, dy: 0 },
-          { dx: -1, dy: 0 },
-          { dx: 0, dy: 1 },
-          { dx: 0, dy: -1 }
-        ];
-        
-        // Pick a random direction
-        const dir = directions[Math.floor(Math.random() * directions.length)];
-        const length = (Math.floor(Math.random() * 4) + 2) * this.gridSpacing; // length as grid steps
-        
-        x += dir.dx * length;
-        y += dir.dy * length;
-        
-        // Keep within canvas margins
-        if (x > 0 && x < width && y > 0 && y < height) {
-          this.points.push({ x, y });
-        } else {
-          break;
-        }
-      }
-
-      this.signalPulse = Math.random() < 0.4; // 40% traces have a glowing current packet
-      this.pulseProgress = 0;
-      this.pulseSpeed = 0.015 + Math.random() * 0.015;
-    }
-
-    draw() {
-      // Draw copper trace path
-      ctx.beginPath();
-      ctx.moveTo(this.points[0].x, this.points[0].y);
-      for (let i = 1; i < this.points.length; i++) {
-        ctx.lineTo(this.points[i].x, this.points[i].y);
-      }
-      
-      // Determine line color based on proximity to mouse
-      let isNearMouse = false;
-      if (mouse.x !== null) {
-        for (let pt of this.points) {
-          const dist = Math.hypot(pt.x - mouse.x, pt.y - mouse.y);
-          if (dist < mouse.radius) {
-            isNearMouse = true;
-            break;
-          }
-        }
-      }
-
-      const traceColor = '#111b33';
-      const glowColor = '#00f0ff';
-
-      ctx.strokeStyle = isNearMouse ? glowColor : traceColor;
-      ctx.lineWidth = isNearMouse ? 1.5 : 1.0;
-      ctx.stroke();
-
-      // Draw solder joints/nodes
-      this.points.forEach((pt, index) => {
-        if (index === 0 || index === this.points.length - 1 || Math.random() < 0.1) {
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, isNearMouse ? 3.5 : 2, 0, Math.PI * 2);
-          ctx.fillStyle = isNearMouse ? glowColor : '#1e293b';
-          ctx.fill();
-        }
-      });
-
-      // Draw electron signal pulse moving down path
-      if (this.signalPulse && this.points.length > 1) {
-        this.pulseProgress += this.pulseSpeed;
-        if (this.pulseProgress >= 1) {
-          this.pulseProgress = 0; // wrap around
-        }
-
-        // Interpolate position across multi-segment path
-        const totalSegments = this.points.length - 1;
-        const segmentProgress = this.pulseProgress * totalSegments;
-        const currentSegment = Math.floor(segmentProgress);
-        const ratio = segmentProgress - currentSegment;
-
-        if (currentSegment < totalSegments) {
-          const startPt = this.points[currentSegment];
-          const endPt = this.points[currentSegment + 1];
-          const px = startPt.x + (endPt.x - startPt.x) * ratio;
-          const py = startPt.y + (endPt.y - startPt.y) * ratio;
-
-          ctx.beginPath();
-          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-          ctx.fillStyle = '#ff7b00'; // Orange signal
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = 'rgba(255, 123, 0, 0.8)';
-          ctx.fill();
-          ctx.shadowBlur = 0; // reset shadow
-        }
-      }
-    }
-  }
-
-  let traces = [];
-  function initCircuit() {
-    traces = [];
-    const gridSpacing = 40;
-    const columns = Math.ceil(width / gridSpacing);
-    const rows = Math.ceil(height / gridSpacing);
-    const totalTraces = Math.min(25, Math.floor((columns * rows) / 40));
-
-    for (let i = 0; i < totalTraces; i++) {
-      // Align start points to grid intersection
-      const startX = Math.floor(Math.random() * columns) * gridSpacing;
-      const startY = Math.floor(Math.random() * rows) * gridSpacing;
-      traces.push(new CircuitTrace(startX, startY, gridSpacing));
-    }
-  }
-
-  function animateCircuit() {
-    ctx.clearRect(0, 0, width, height);
-    
-    // Draw background dots for schematic grid look
-    const gridSpacing = 40;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-    for (let x = 0; x < width; x += gridSpacing) {
-      for (let y = 0; y < height; y += gridSpacing) {
-        ctx.fillRect(x - 1, y - 1, 2, 2);
-      }
-    }
-
-    // Draw electrical lines
-    traces.forEach(trace => trace.draw());
-
-    animationFrameId = requestAnimationFrame(animateCircuit);
-  }
-
-  initCircuit();
-  animateCircuit();
+  if (animatedHeadline) setTimeout(typeText, 1000);
 
   // ==========================================
   // 3. Active Navigation Link Spy
@@ -254,11 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const contactForm = document.getElementById('portfolio-contact-form');
   const formFieldsDiv = document.querySelector('.form-fields');
   const submitBtn = document.getElementById('btn-submit-contact');
-  const submitText = submitBtn.querySelector('.btn-text');
-  const submitLoader = submitBtn.querySelector('.btn-loader');
+  const submitText = submitBtn && submitBtn.querySelector('.btn-text');
+  const submitLoader = submitBtn && submitBtn.querySelector('.btn-loader');
   const consoleOutput = document.getElementById('terminal-console-output');
 
-  contactForm.addEventListener('submit', (e) => {
+  if (contactForm) contactForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
     // Collect data
@@ -362,61 +192,50 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ==========================================
-  // 6. Know More Modal
+  // 6. Tabs (About, Recognition & Community)
   // ==========================================
-  const knowMoreBtn = document.getElementById('know-more-btn');
-  const knowMoreModal = document.getElementById('know-more-modal');
-  const modalCloseBtn = document.getElementById('modal-close');
+  document.querySelectorAll('[data-tabgroup]').forEach((group) => {
+    const name = group.dataset.tabgroup;
+    const tabs = group.querySelectorAll('[data-tab]');
+    tabs.forEach((tab) => tab.addEventListener('click', () => {
+      tabs.forEach((t) => {
+        t.classList.toggle('active', t === tab);
+        t.setAttribute('aria-selected', String(t === tab));
+      });
+      document.querySelectorAll(`[data-pane-group="${name}"]`).forEach((p) => {
+        p.classList.toggle('active', p.dataset.pane === tab.dataset.tab);
+      });
+      const heading = document.querySelector(`[data-heading-for="${name}"]`);
+      if (heading && tab.dataset.label) heading.textContent = tab.dataset.label;
+    }));
+  });
 
-  function setModalOpen(open, returnFocus = true) {
-    knowMoreModal.classList.toggle('open', open);
-    document.body.style.overflow = open ? 'hidden' : '';
-    // Move focus into the dialog on open, back to the trigger on close
-    if (open) {
-      modalCloseBtn.focus();
-    } else if (returnFocus) {
-      knowMoreBtn.focus();
-    }
+  // ==========================================
+  // 6b. Filter groups (Projects, Certifications)
+  // ==========================================
+  function bindFilter(groupId, itemSelector, attr) {
+    const group = document.getElementById(groupId);
+    if (!group) return;
+    const buttons = group.querySelectorAll('[data-filter]');
+    buttons.forEach((btn) => btn.addEventListener('click', () => {
+      buttons.forEach((b) => b.classList.toggle('active', b === btn));
+      document.querySelectorAll(itemSelector).forEach((item) => {
+        item.classList.toggle('hidden', btn.dataset.filter !== 'all' && item.dataset[attr] !== btn.dataset.filter);
+      });
+    }));
   }
+  bindFilter('project-filters', '.project-card', 'group');
+  bindFilter('cert-filters', '.cert-card', 'domain');
 
-  knowMoreBtn.addEventListener('click', () => setModalOpen(true));
-  modalCloseBtn.addEventListener('click', () => setModalOpen(false));
-
-  // Close when clicking the dark backdrop (outside the dialog)
-  knowMoreModal.addEventListener('click', (e) => {
-    if (e.target === knowMoreModal) {
-      setModalOpen(false);
-    }
-  });
-
-  // Close the modal when the footer "Let's talk" link is used (then it scrolls to contact);
-  // skip the focus return so focus stays in the flow while the page scrolls to #contact
-  const modalContactLink = document.getElementById('modal-contact-link');
-  modalContactLink.addEventListener('click', () => setModalOpen(false, false));
-
-  // Close on Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && knowMoreModal.classList.contains('open')) {
-      setModalOpen(false);
-    }
-  });
-
-  // Keep Tab focus cycling inside the dialog while it is open
-  knowMoreModal.addEventListener('keydown', (e) => {
-    if (e.key !== 'Tab') return;
-    const focusables = knowMoreModal.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
+  // ==========================================
+  // 6d. View all experience
+  // ==========================================
+  const expAllBtn = document.getElementById('exp-view-all');
+  const expMore = document.getElementById('exp-more');
+  if (expAllBtn) expAllBtn.addEventListener('click', () => {
+    const open = expMore.classList.toggle('open');
+    expAllBtn.setAttribute('aria-expanded', String(open));
+    expAllBtn.querySelector('.exp-all-text').textContent = open ? 'Show fewer' : 'View all experience';
   });
 
   // ==========================================
@@ -435,6 +254,36 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // ==========================================
+  // 8. Scroll Reveal
+  // ==========================================
+  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        el.classList.add('in');
+        io.unobserve(el);
+        // Hand transitions back to the element once revealed, so hover effects work normally
+        el.addEventListener('transitionend', function done(ev) {
+          if (ev.target !== el || ev.propertyName !== 'opacity') return;
+          el.classList.remove('reveal', 'in');
+          el.style.transitionDelay = '';
+          el.removeEventListener('transitionend', done);
+        });
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll(
+      '.hero-text, .hero-visual, .section-header-center, .head-stack, .head-row, .info-card, .experience-card, .project-card, .skill-card, .service-card, .cert-bar, .cert-card, .contact-grid > *, .page-title, .thesis-meta'
+    ).forEach((el) => {
+      const index = Array.prototype.indexOf.call(el.parentElement.children, el);
+      el.style.transitionDelay = Math.min(index, 4) * 90 + 'ms';
+      el.classList.add('reveal');
+      io.observe(el);
+    });
+  }
 
   // Footer Dynamic Year
   document.getElementById('footer-year').textContent = new Date().getFullYear();
