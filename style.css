@@ -1323,7 +1323,8 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: 
 /* Hero socials */
 .social-btns { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .social-btn { width: 46px; height: 46px; display: grid; place-items: center; color: var(--text-primary); background: var(--surface-card); border: 1px solid var(--border-color); border-radius: 12px; transition: transform var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast); }
-.social-btn svg { width: 22px; height: 22px; }
+.social-btn img { width: 22px; height: 22px; filter: brightness(0) invert(1); transition: filter var(--transition-fast); }
+.social-btn:hover img { filter: brightness(0) invert(1) drop-shadow(0 0 6px #00f0ff); }
 .social-btn:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); box-shadow: var(--shadow-glow); transform: translateY(-3px); }
 
 /* Tabs (About, Projects, Community, Certifications) */
